@@ -1,24 +1,75 @@
-// const http = require("http");
-// const PORT = '8080';
+import http from "http";
+import fs from "fs";
 
-import getAllProduct from "../users";
-// let products = [
-//   { id: 1, name: "laptop", price: 3222 },
-//   { id: 2, name: "Webcap", price: 1233 },
-//   { id: 3, name: "Smart phone", price: 1233 }
-// ];
+const port = 8080;
 
-// const handelServserError = (res, statusCode, message) => {
-//   res.writeHead(statusCode, { 'Content-Type': 'text/plain' });
-//   res.write(message);
-//   res.end();
-// };
+//products to return in the "GET" requsit
+let products = [
+  { id: "1", name: "laptop", price: 4000 },
+  { id: "2", name: "Webcap", price: 3000 },
+  { id: "3", name: "Smart phone", price: 2000 },
+];
 
-// http
-//   .createServer((req, res) => {
-//     /* handle http requests */
-//   })
-//   .listen(PORT);
+//reusing function for error response 
+const errorResponse = (res, statusCode, message) => {
+  res.writeHead(statusCode, { "Content-type": "application/json" });
+  res.end(
+    JSON.stringify({
+      message: message,
+    })
+  );
+};
 
-// console.log(`Server running at http://127.0.0.1:${PORT}/`);
-console.log('hello from backend');
+//reusing function for successful response
+const successResponse = (res, statusCode, message, data = {}) => {
+  res.writeHead(statusCode, { "Content-type": "application/json" });
+  res.end(
+    JSON.stringify({
+      success: true,
+      message: message,
+      data: data,
+    })
+  );
+};
+
+const server = http.createServer((req, res) => {
+  if (req.url === "/" && req.method === "GET") {
+    try {
+   successResponse(res, 200, "Hello World!");
+    } catch (error) {
+   errorResponse(res, 500, error.message);
+    }
+  }
+
+  else if (req.url === "/products" && req.method === "GET") {
+    try {
+      successResponse(res, 200, "All the proudtcs are listed!", products);
+    } catch (error) {
+      errorResponse(res, 500, error.message);
+    }
+  }
+ 
+  else if (req.url.match(/\/products\/([0-9]+)/) && req.method === "GET") {
+    try {
+      const id = req.url.split('/')[2]; 
+      const product = products.find((product) => product.id === id)
+      console.log(req.url)
+      successResponse(res, 200, "Single product!", product);
+    } catch (error) {
+      errorResponse(res, 500, error.message);
+    }
+  }
+});
+
+server.listen(port, () => {
+  console.log(`Server is running at http://localhost:${port}`);
+});
+
+// server: 
+//GET -> / -> just a hello world 
+//GET -> /products -> return the products
+//GET -> /products/id -> return the product
+
+//useful information 
+//1-you can add many response but the last one always should be "res.end" only 1 end !
+//2- make it relastic, you can pass more like if its succeussful, statucCode ...etc
