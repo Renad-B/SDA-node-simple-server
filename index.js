@@ -1,5 +1,6 @@
 import http from "http";
 import { parse } from "querystring";
+import fs from "fs/promises";
 
 const port = 8080;
 
@@ -32,28 +33,34 @@ const successResponse = (res, statusCode, message, data = {}) => {
   );
 };
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   if (req.url === "/" && req.method === "GET") {
     try {
       successResponse(res, 200, "Hello World!");
     } catch (error) {
       errorResponse(res, 500, error.message);
     }
+
   } else if (req.url === "/products" && req.method === "GET") {
     try {
+      //make it readable
+      const products = JSON.parse(await fs.readFile("product.json", "utf-8"));
       successResponse(res, 200, "All the proudtcs are listed!", products);
     } catch (error) {
       errorResponse(res, 500, error.message);
     }
+
   } else if (req.url.match(/\/products\/([0-9]+)/) && req.method === "GET") {
     try {
       const id = req.url.split("/")[2];
+      const products = JSON.parse(await fs.readFile("product.json", "utf-8"));
       const product = products.find((product) => product.id === id);
       console.log(req.url);
       successResponse(res, 200, "Single product!", product);
     } catch (error) {
       errorResponse(res, 500, error.message);
     }
+
   } else if (req.url === "/products" && req.method === "POST") {
     try {
       let body = "";
@@ -61,7 +68,7 @@ const server = http.createServer((req, res) => {
         body += chunk;
       });
       //to have it
-      req.on("end", () => {
+      req.on("end", async () => {
         const data = parse(body);
         console.log(data);
         //data : name and price
@@ -70,7 +77,14 @@ const server = http.createServer((req, res) => {
           name: String(data.name),
           price: Number(data.price),
         };
-        products.push(newProduct);
+       // 1- get exisiting products from the file 
+
+      //1, make it readable always
+      const exisitngProducts = JSON.parse(await fs.readFile("product.json", "utf-8"));
+      //2-  add the new data to the existing product 
+      exisitngProducts.push(newProduct);
+      //3- write the file again 
+      await fs.writeFile("product.json", JSON.stringify(exisitngProducts));
       });
       successResponse(res, 200, "New product !");
     } catch (error) {
@@ -82,13 +96,3 @@ const server = http.createServer((req, res) => {
 server.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
 });
-
-// server:
-//GET -> / -> just a hello world
-//GET -> /products -> return the products
-//GET -> /products/id -> return the product
-//POST -> /products -> create a product
-
-//useful information
-//1-you can add many response but the last one always should be "res.end" only 1 end !
-//2- make it relastic, you can pass more like if its succeussful, statucCode ...etc
